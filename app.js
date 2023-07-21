@@ -4,8 +4,7 @@ const express = require("express");
 const ejs = require("ejs");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
-const encrypt = require("mongoose-encryption");
-
+const md5 = require("md5");
 
 const app = express();
 
@@ -25,18 +24,38 @@ const userSchema = new mongoose.Schema({
     password:String
 });
 
-userSchema.plugin(encrypt,{secret: process.env.SECRET, encryptedFields:['password']});
-
 const User = new mongoose.model("User",userSchema);
 
 ////////////////////////////////////////////Routes section////////////////////////////////////////////////////
-
 
 //////home route//////
 app.get("/",(req,res)=>{
     res.render("home");
 });
 
+//////register route//////
+app.route("/register")
+.get((req,res)=>{
+    res.render("register");
+})
+.post((req,res)=>{
+
+    const newUser = new User({
+        email:req.body.username,
+        password:md5(req.body.password)
+    });
+
+    newUser.save()
+    .then(()=>{
+        console.log("New user has been successfully registered.");
+        res.render("secrets");
+    })
+    .catch((error)=>{
+        console.error("Error in registering new user: ",error);
+        res.send("Registeration Error!!! Try again.");
+    })
+
+});
 
 //////login route//////
 app.route("/login")
@@ -47,7 +66,7 @@ app.route("/login")
   
     User.findOne({email:req.body.username})
     .then((foundUser)=>{
-        if(foundUser.password === req.body.password){
+        if(foundUser.password === md5(req.body.password)){
             res.render("secrets");
             console.log(foundUser.password);
         }
@@ -60,30 +79,6 @@ app.route("/login")
         res.send("You haven't registered yet try to register first.");
         console.log("User hasn't registered yet :",error);
     });
-
-});
-
-//////register route//////
-app.route("/register")
-.get((req,res)=>{
-    res.render("register");
-})
-.post((req,res)=>{
-
-    const newUser = new User({
-        email:req.body.username,
-        password:req.body.password
-    });
-
-    newUser.save()
-    .then(()=>{
-        console.log("New user has been successfully registered.");
-        res.render("secrets");
-    })
-    .catch((error)=>{
-        console.error("Error in registering new user: ",error);
-        res.send("Registeration Error!!! Try again.");
-    })
 
 });
 
